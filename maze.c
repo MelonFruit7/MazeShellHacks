@@ -12,6 +12,7 @@ int** board; //Board for maze generation
 void defineCSS(GtkWidget *widget, GtkCssProvider *cssProvider, char* class);
 gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data);
 void createMaze(cairo_t *cr, int x, int y);
+int availableSpots(int boardX, int boardY);
 
 void activate(GtkApplication *app, gpointer user_data) {
 	board = malloc(windowWidth/lineLength * sizeof(int*));
@@ -58,49 +59,61 @@ int main(int argc, char** argv) {
 
 
 gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data) {
-  cairo_set_source_rgb(cr, 0, 0, 0);
-  cairo_set_line_width(cr, 2);
+  cairo_set_source_rgb(cr, 0, 1, 0);
+  cairo_set_line_width(cr, 1);
   srand(time(0));
 	
   int x = windowWidth/2, y = windowHeight/2;
   createMaze(cr, x, y);
 
   cairo_stroke(cr); 
-  return TRUE;  
+  return FALSE;  
 }
 void createMaze(cairo_t *cr, int x, int y) {
 	cairo_move_to(cr, x, y);
 	int boardX = x/lineLength, boardY = y/lineLength; //The board x and y has to be adjusted.
 	board[boardY][boardX] = 1;
-	switch(rand()%4) {
-		case 0: 
-			if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] != 1) {
-				board[boardY][boardX+1] = 1;
-				cairo_line_to(cr, x+lineLength, y);
-				createMaze(cr, x+lineLength, y);
-			}	
-		break;
-		case 1: 
-			if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] != 1) {
-				board[boardY+1][boardX] = 1;
-				cairo_line_to(cr, x, y+lineLength);
-				createMaze(cr, x, y+lineLength);
-			}
-		break;
-		case 2: 		 
-			if (boardX-1 >= 0 && board[boardY][boardX-1] != 1) {
-				board[boardY][boardX-1] = 1;
-				cairo_line_to(cr, x-lineLength, y);
-				createMaze(cr, x-lineLength, y);
-			}
-		break;
-		case 3: 
-			if (boardY-1 >= 0 && board[boardY-1][boardX] != 1) {
-				board[boardY-1][boardX] = 1;
-				cairo_line_to(cr, x, y-lineLength);
-				createMaze(cr, x, y-lineLength);
-			}
+	while (availableSpots(boardX, boardY) != 0) {
+		switch(rand()%4) {
+			case 0: 
+				if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] != 1) {
+					board[boardY][boardX+1] = 1;
+					cairo_line_to(cr, x+lineLength, y);
+					createMaze(cr, x+lineLength, y);
+				}	
+			break;
+			case 1: 
+				if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] != 1) {
+					board[boardY+1][boardX] = 1;
+					cairo_line_to(cr, x, y+lineLength);
+					createMaze(cr, x, y+lineLength);
+				}
+			break;
+			case 2: 		 
+				if (boardX-1 >= 0 && board[boardY][boardX-1] != 1) {
+					board[boardY][boardX-1] = 1;
+					cairo_line_to(cr, x-lineLength, y);
+					createMaze(cr, x-lineLength, y);
+				}
+			break;
+			case 3: 
+				if (boardY-1 >= 0 && board[boardY-1][boardX] != 1) {
+					board[boardY-1][boardX] = 1;
+					cairo_line_to(cr, x, y-lineLength);
+					createMaze(cr, x, y-lineLength);
+				}
+		}
+		cairo_move_to(cr, x, y);
 	}
+	return;
+}
+int availableSpots(int boardX, int boardY) {
+	int spots = 0;
+	if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] != 1) spots++;
+	if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] != 1) spots++;
+	if (boardX-1 >= 0 && board[boardY][boardX-1] != 1) spots++;
+	if (boardY-1 >= 0 && board[boardY-1][boardX] != 1) spots++;
+	return spots;
 }
 
 void defineCSS(GtkWidget *widget, GtkCssProvider *cssProvider, char* class) { //Used to define css for a widget
