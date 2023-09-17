@@ -1,9 +1,9 @@
 .screen {background: white;}
 .navBtn {
-	border: 5px solid red;
+	border: 5px solid black;
 	box-shadow: none;
 
 	background: black;
 	color: white;
 }
-.vBox {}
+.vBox {border: 5px solid black;}
