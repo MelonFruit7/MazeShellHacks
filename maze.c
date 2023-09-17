@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-int lineLength = 5; //Changing this value will more than likely break the program
+int lineLength = 20; //Changing this value will more than likely break the program
 int windowWidth = 500, windowHeight = 500; //Changing these values will more than likely break the program (Should be a multiple of lineLength)
 
 int** board; //Board for maze generation
@@ -11,8 +11,10 @@ int** board; //Board for maze generation
 
 void defineCSS(GtkWidget *widget, GtkCssProvider *cssProvider, char* class);
 gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data);
-void createMaze(cairo_t *cr, int x, int y);
+void createMaze(cairo_t *cr, int x, int y, int direction);
 int availableSpots(int boardX, int boardY);
+void mazeRedraw(cairo_t *cr);
+void clearBoard();
 
 void activate(GtkApplication *app, gpointer user_data) {
 	board = malloc(windowWidth/lineLength * sizeof(int*));
@@ -59,48 +61,52 @@ int main(int argc, char** argv) {
 
 
 gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data) {
+  int x = windowWidth/2, y = windowHeight/2;
   cairo_set_source_rgb(cr, 0, 1, 0);
   cairo_set_line_width(cr, 1);
+
+  if (board[0][0] != 0) {
+	mazeRedraw(cr);
+	cairo_stroke(cr);
+	return TRUE;
+  }
+  clearBoard();
   srand(time(0));
 	
-  int x = windowWidth/2, y = windowHeight/2;
-  createMaze(cr, x, y);
-
+  createMaze(cr, x, y, 1); //Create the maze
   cairo_stroke(cr); 
-  return FALSE;  
+  gtk_widget_queue_draw(widget);
+  return TRUE;  
 }
-void createMaze(cairo_t *cr, int x, int y) {
+void createMaze(cairo_t *cr, int x, int y, int direction) {
 	cairo_move_to(cr, x, y);
 	int boardX = x/lineLength, boardY = y/lineLength; //The board x and y has to be adjusted.
-	board[boardY][boardX] = 1;
+	board[boardY][boardX] = direction; //Set direction in the board
+
 	while (availableSpots(boardX, boardY) != 0) {
 		switch(rand()%4) {
 			case 0: 
-				if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] != 1) {
-					board[boardY][boardX+1] = 1;
+				if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] == 0) {
 					cairo_line_to(cr, x+lineLength, y);
-					createMaze(cr, x+lineLength, y);
+					createMaze(cr, x+lineLength, y, 1);
 				}	
 			break;
 			case 1: 
-				if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] != 1) {
-					board[boardY+1][boardX] = 1;
+				if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] == 0) {
 					cairo_line_to(cr, x, y+lineLength);
-					createMaze(cr, x, y+lineLength);
+					createMaze(cr, x, y+lineLength, 2);
 				}
 			break;
 			case 2: 		 
-				if (boardX-1 >= 0 && board[boardY][boardX-1] != 1) {
-					board[boardY][boardX-1] = 1;
+				if (boardX-1 >= 0 && board[boardY][boardX-1] == 0) {
 					cairo_line_to(cr, x-lineLength, y);
-					createMaze(cr, x-lineLength, y);
+					createMaze(cr, x-lineLength, y, 3);
 				}
 			break;
 			case 3: 
-				if (boardY-1 >= 0 && board[boardY-1][boardX] != 1) {
-					board[boardY-1][boardX] = 1;
+				if (boardY-1 >= 0 && board[boardY-1][boardX] == 0) {
 					cairo_line_to(cr, x, y-lineLength);
-					createMaze(cr, x, y-lineLength);
+					createMaze(cr, x, y-lineLength, 4);
 				}
 		}
 		cairo_move_to(cr, x, y);
@@ -109,12 +115,32 @@ void createMaze(cairo_t *cr, int x, int y) {
 }
 int availableSpots(int boardX, int boardY) {
 	int spots = 0;
-	if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] != 1) spots++;
-	if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] != 1) spots++;
-	if (boardX-1 >= 0 && board[boardY][boardX-1] != 1) spots++;
-	if (boardY-1 >= 0 && board[boardY-1][boardX] != 1) spots++;
+	if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] == 0) spots++;
+	if (boardY+1 < windowHeight/lineLength && board[boardY+1][boardX] == 0) spots++;
+	if (boardX-1 >= 0 && board[boardY][boardX-1] == 0) spots++;
+	if (boardY-1 >= 0 && board[boardY-1][boardX] == 0) spots++;
 	return spots;
 }
+
+void mazeRedraw(cairo_t *cr) {
+	for (int j = 0; j < windowHeight/lineLength; j++) {
+		for (int i = 0; i < windowWidth/lineLength; i++) {
+			cairo_move_to(cr, i*lineLength, j*lineLength);
+			//You have to be a magician to read this
+			//Things are inverted based on where x and y values go
+			switch(board[j][i]) {
+				case 1: cairo_line_to(cr, i*lineLength - lineLength, j*lineLength);
+				break;
+				case 2: cairo_line_to(cr, i*lineLength, j*lineLength - lineLength);
+				break;
+				case 3: cairo_line_to(cr, i*lineLength + lineLength, j*lineLength);
+				break;
+				case 4: cairo_line_to(cr, i*lineLength, j*lineLength + lineLength);
+			}
+		}	
+	}
+}
+void clearBoard() {for (int i = 0; i < windowHeight/lineLength; i++) for (int j = 0; j < windowWidth/lineLength; j++) board[i][j] = 0;}
 
 void defineCSS(GtkWidget *widget, GtkCssProvider *cssProvider, char* class) { //Used to define css for a widget
   GtkStyleContext *context = gtk_widget_get_style_context(widget);
