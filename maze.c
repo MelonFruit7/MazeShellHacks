@@ -1,10 +1,12 @@
 #include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #include <cairo.h>
 #include <stdlib.h>
 #include <time.h>
 
-int lineLength = 20; //Changing this value will more than likely break the program
-int windowWidth = 500, windowHeight = 500; //Changing these values will more than likely break the program (Should be a multiple of lineLength)
+int lineLength = 20;
+int windowWidth = 500, windowHeight = 500;
+int prevWindowWidth = 500, prevWindowHeight = 500;
 
 int** board; //Board for maze generation
 GtkWidget *darea; //Drawing board
@@ -16,6 +18,7 @@ int availableSpots(int boardX, int boardY);
 void mazeRedraw(cairo_t *cr);
 void clearBoard(int newLL);
 void mazeMakeInput(GtkWidget *widget, gpointer data);
+void changeSize(GtkWidget *widget, GdkRectangle *allocation, gpointer data);
 
 void activate(GtkApplication *app, gpointer user_data) {
 	srand(time(0));
@@ -27,7 +30,7 @@ void activate(GtkApplication *app, gpointer user_data) {
 
 	GtkWidget *window = gtk_application_window_new(app);
 	gtk_window_set_default_size(GTK_WINDOW(window), windowWidth, windowHeight);
-	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+	gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 	gtk_container_set_border_width(GTK_CONTAINER(window), 10);
 	gtk_window_set_title(GTK_WINDOW(window), "aMAZEing");
 	
@@ -50,6 +53,7 @@ void activate(GtkApplication *app, gpointer user_data) {
 
 	g_signal_connect(G_OBJECT(darea), "draw", G_CALLBACK(drawing), NULL);
 	g_signal_connect(createBtn, "clicked", G_CALLBACK(mazeMakeInput), LL);
+	g_signal_connect(window, "size-allocate", G_CALLBACK(changeSize), NULL);
 
 	defineCSS(navBar, cssProvider, "navBtn");
 	defineCSS(vBox, cssProvider, "vBox");
@@ -63,8 +67,18 @@ int main(int argc, char** argv) {
 	GtkApplication *app = gtk_application_new("in.maze", G_APPLICATION_NON_UNIQUE);
 	g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     int ret = g_application_run(G_APPLICATION(app), argc, argv);
-
+	
 	return ret;
+}
+
+void changeSize(GtkWidget *widget, GdkRectangle *allocation, gpointer data) {
+	prevWindowWidth = windowWidth;
+	prevWindowHeight = windowHeight;
+
+	windowWidth = gtk_widget_get_allocated_width(widget);
+	windowHeight = gtk_widget_get_allocated_height(widget);
+	if (prevWindowWidth == windowWidth && prevWindowHeight == windowHeight) return;
+	clearBoard(lineLength);
 }
 
 
@@ -147,7 +161,7 @@ void mazeRedraw(cairo_t *cr) { //Used to redraw the maze from the board
 	}
 }
 void clearBoard(int newLL) {
-	for (int i = 0; i < windowWidth/lineLength; i++) free(board[i]);
+	for (int i = 0; i < prevWindowHeight/lineLength; i++) free(board[i]);
 	free(board);
 	board = (int**)malloc(windowHeight/newLL * sizeof(int*));
 	for (int i = 0; i < windowHeight/newLL; i++) {
