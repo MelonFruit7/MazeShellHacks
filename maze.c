@@ -4,24 +4,26 @@
 #include <stdlib.h>
 #include <time.h>
 
+
 int lineLength = 20;
 int windowWidth = 500, windowHeight = 500;
-int prevWindowWidth = 500, prevWindowHeight = 500;
+int prevWindowWidth = 500, prevWindowHeight = 500; //if it works, it works. 
 
 int** board; //Board for maze generation
 GtkWidget *darea; //Drawing board
 
-void defineCSS(GtkWidget *widget, GtkCssProvider *cssProvider, char* class);
-gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data);
-void createMaze(cairo_t *cr, int x, int y, int direction);
-int availableSpots(int boardX, int boardY);
-void mazeRedraw(cairo_t *cr);
-void clearBoard(int newLL);
-void mazeMakeInput(GtkWidget *widget, gpointer data);
-void changeSize(GtkWidget *widget, GdkRectangle *allocation, gpointer data);
+void defineCSS(GtkWidget *widget, GtkCssProvider *cssProvider, char* class); //Defines CSS for widgets
+gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data); //Called when a draw event is seen
+void createMaze(cairo_t *cr, int x, int y, int direction); //Creates a random maze
+int availableSpots(int boardX, int boardY); //Checks how many spots you can move on a board.
+void mazeRedraw(cairo_t *cr); //Redraw the last generated maze on the board
+void clearBoard(int newLL); //Clear and allocate 
+void mazeMakeInput(GtkWidget *widget, gpointer data); //Called when user clicks on create button
+void changeSize(GtkWidget *widget, GdkRectangle *allocation, gpointer data); //Called when the window changes size
 
 void activate(GtkApplication *app, gpointer user_data) {
 	srand(time(0));
+	//Allocate for the default board
 	board = malloc(windowHeight/lineLength * sizeof(int*));
 	for (int i = 0; i < windowHeight/lineLength; i++) {
 		board[i] = malloc(windowWidth/lineLength * sizeof(int));
@@ -45,16 +47,20 @@ void activate(GtkApplication *app, gpointer user_data) {
 
 	GtkWidget *createBtn = gtk_button_new_with_label("Create");
 	gtk_box_pack_start(GTK_BOX(navBar), createBtn, FALSE, FALSE, 0);
+
 	GtkWidget *LL = gtk_entry_new(); //Line Length
+	gtk_entry_set_placeholder_text(GTK_ENTRY(LL), "Line Length");
 	gtk_box_pack_start(GTK_BOX(navBar), LL, TRUE, TRUE, 0);
 
 	darea = gtk_drawing_area_new();
 	gtk_box_pack_start(GTK_BOX(vBox), darea, TRUE, TRUE, 0);
 
+	//Signals
 	g_signal_connect(G_OBJECT(darea), "draw", G_CALLBACK(drawing), NULL);
 	g_signal_connect(createBtn, "clicked", G_CALLBACK(mazeMakeInput), LL);
 	g_signal_connect(window, "size-allocate", G_CALLBACK(changeSize), NULL);
 
+	//CSS define
 	defineCSS(navBar, cssProvider, "navBtn");
 	defineCSS(vBox, cssProvider, "vBox");
 	defineCSS(window, cssProvider, "screen");	
@@ -84,11 +90,11 @@ void changeSize(GtkWidget *widget, GdkRectangle *allocation, gpointer data) {
 
 gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data) {
   int x = windowWidth/2, y = windowHeight/2;
-  cairo_set_source_rgb(cr, 0, 1, 0);
-  cairo_set_line_width(cr, 1);
+  cairo_set_source_rgb(cr, 0, 1, 0); //Change line color
+  cairo_set_line_width(cr, 1); //Change line width
 
-  if (board[0][0] != 0) {
-	mazeRedraw(cr);
+  if (board[0][0] != 0) { //If a maze was already generated
+	mazeRedraw(cr); 
 	cairo_stroke(cr);
 	return TRUE;
   }
@@ -98,16 +104,17 @@ gboolean drawing(GtkWidget *widget, cairo_t *cr, gpointer data) {
   gtk_widget_queue_draw(darea); //Request a new draw (Aka clear the drawing area and call drawing() again)
   return TRUE;  
 }
+
 void createMaze(cairo_t *cr, int x, int y, int direction) { //Create the maze
-	cairo_move_to(cr, x, y);
 	int boardX = x/lineLength, boardY = y/lineLength; //The board x and y has to be adjusted.
 	board[boardY][boardX] = direction; //Set direction in the board
 
-	while (availableSpots(boardX, boardY) != 0) { 
+	while (availableSpots(boardX, boardY) != 0) { //Loop until all points (up, right, down, left) next to (x,y) have been filled with a direction
+		cairo_move_to(cr, x, y);
 		switch(rand()%4) {
 			case 0: 
 				if (boardX+1 < windowWidth/lineLength && board[boardY][boardX+1] == 0) {
-					cairo_line_to(cr, x+lineLength, y);
+					cairo_line_to(cr, x+lineLength, y); 
 					createMaze(cr, x+lineLength, y, 1);
 				}	
 			break;
@@ -129,7 +136,6 @@ void createMaze(cairo_t *cr, int x, int y, int direction) { //Create the maze
 					createMaze(cr, x, y-lineLength, 4);
 				}
 		}
-		cairo_move_to(cr, x, y);
 	}
 	return;
 }
@@ -160,6 +166,7 @@ void mazeRedraw(cairo_t *cr) { //Used to redraw the maze from the board
 		}	
 	}
 }
+
 void clearBoard(int newLL) {
 	for (int i = 0; i < prevWindowHeight/lineLength; i++) free(board[i]);
 	free(board);
@@ -172,9 +179,9 @@ void clearBoard(int newLL) {
 
 void mazeMakeInput(GtkWidget *widget, gpointer data) {
 	GtkWidget *LL = (GtkWidget *)data;
-	int check = atoi(gtk_entry_get_text(GTK_ENTRY(LL)));
-	if (check > 1) {
-		clearBoard(check);
+	int check = atoi(gtk_entry_get_text(GTK_ENTRY(LL))); //Get the number in the text box
+	if (check > 1) { 
+		clearBoard(check); //Check the board and pass in the new line length
 		lineLength = check;
 	} else {
 		clearBoard(lineLength);
